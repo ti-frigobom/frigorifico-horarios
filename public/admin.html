@@ -44,9 +44,9 @@
             </div>
 
         <div class="p-4 bg-gray-50 text-center border-t">
-            <button onclick="window.location.href='/api/logout'" class="text-gray-400 hover:text-red-600 text-xs font-bold uppercase tracking-widest transition">
-                Sair do Sistema (Logout)
-            </button>
+            <button onclick="fazerLogout()" class="text-gray-400 hover:text-red-600 text-xs font-bold uppercase tracking-widest transition">
+    		Sair do Sistema (Logout)
+	</button>
         </div>
     </div>
 
@@ -123,10 +123,28 @@
 
         // 3. AÇÕES
         async function adicionarSetor() {
-            const res = await fetch('/api/setores', { method: 'POST' });
-            if (res.ok) carregar();
-            else alert("Erro ao adicionar. Sessão pode ter expirado.");
+    try {
+        const res = await fetch('/api/setores', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (res.ok) {
+            // Importante: Aguarda um pouco para o banco processar e recarrega
+            setTimeout(() => {
+                carregar(); 
+            }, 300);
+        } else if (res.status === 401) {
+            alert("Sessão expirada. Faça login novamente.");
+            window.location.href = '/login.html';
+        } else {
+            alert("Erro ao criar setor no servidor.");
         }
+    } catch (error) {
+        console.error("Erro na requisição:", error);
+        alert("Erro de conexão com o servidor.");
+    }
+}
 
         async function excluir(id) {
             if (confirm("Deseja apagar este setor permanentemente?")) {
@@ -177,6 +195,12 @@
                 btn.disabled = false;
             }
         }
+
+	function fazerLogout() {
+    		if(confirm("Deseja realmente sair?")) {
+       			window.location.href = '/api/logout';
+    		}
+	}
 
         // INICIALIZAÇÃO
         window.onload = () => {

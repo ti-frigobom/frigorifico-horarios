@@ -6,7 +6,7 @@ const path = require('path');
 
 const app = express();
 
-// 1. CONEXÃO MONGODB
+// 1. CONEXÃO MONGODB ATLAS
 const MONGO_URI = 'mongodb+srv://ti-frigobom:e9SD&n5F*y9!@horarios.epbewyg.mongodb.net/?appName=Horarios'; 
 mongoose.connect(MONGO_URI).then(() => console.log('✅ MongoDB Conectado'));
 
@@ -23,7 +23,7 @@ app.use(session({
     secret: 'frigobom-2026-secure',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 5 * 60 * 1000 } // 5 minutos
+    cookie: { maxAge: 5 * 60 * 1000 } 
 }));
 
 app.use(bodyParser.json());
@@ -38,7 +38,7 @@ function proteger(req, res, next) {
     else res.status(401).json({ error: "Sessão expirada" });
 }
 
-// 5. ROTAS
+// 5. ROTAS DE AUTENTICAÇÃO
 app.post('/api/login', (req, res) => {
     const { usuario, senha } = req.body;
     if (usuario === LOGIN_USER && senha === LOGIN_PASS) {
@@ -47,6 +47,14 @@ app.post('/api/login', (req, res) => {
     } else res.status(401).json({ success: false });
 });
 
+app.get('/api/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.clearCookie('connect.sid');
+        res.redirect('/login.html');
+    });
+});
+
+// 6. ROTAS DE DADOS
 app.get('/api/config/data', async (req, res) => {
     const cfg = await Config.findOne({ chave: 'data_producao' });
     res.json(cfg || { valor: "" });
@@ -55,6 +63,22 @@ app.get('/api/config/data', async (req, res) => {
 app.get('/api/setores', async (req, res) => {
     const lista = await Setor.find().sort({ ordem: 1 });
     res.json(lista);
+});
+
+// ADICIONAR NOVO SETOR (CORRIGIDO)
+app.post('/api/setores', proteger, async (req, res) => {
+    try {
+        const ultimo = await Setor.findOne().sort({ ordem: -1 });
+        const novaOrdem = ultimo ? ultimo.ordem + 1 : 1;
+        const novo = new Setor({ 
+            idSetor: Date.now(), 
+            ordem: novaOrdem, 
+            nome: "Novo Setor", 
+            horario: "00:00 - 00:00" 
+        });
+        await novo.save();
+        res.json(novo);
+    } catch (err) { res.status(500).send(err.message); }
 });
 
 app.post('/api/atualizar-todos', proteger, async (req, res) => {
@@ -67,13 +91,6 @@ app.post('/api/atualizar-todos', proteger, async (req, res) => {
         await Setor.bulkWrite(ops);
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
-});
-
-app.post('/api/setores', proteger, async (req, res) => {
-    const ultimo = await Setor.findOne().sort({ ordem: -1 });
-    const novo = new Setor({ idSetor: Date.now(), ordem: ultimo ? ultimo.ordem + 1 : 1, nome: "Novo Setor", horario: "00:00 - 00:00" });
-    await novo.save();
-    res.json(novo);
 });
 
 app.delete('/api/setores/:id', proteger, async (req, res) => {
