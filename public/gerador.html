@@ -2,148 +2,99 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Gerador de Card Profissional</title>
+    <title>Gerador de Card - Frigobom</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
+        .bg-gold { background: linear-gradient(45deg, #d4af37, #f1d592); }
         .text-gold { color: #d4af37; }
-        .bg-gold { background-color: #d4af37; }
-        .border-gold { border-color: #d4af37; }
-        
-        #card-export {
-            width: 450px;
-            background-color: #fff;
-            border: 2px solid #d4af37;
-            position: relative;
-        }
-        .header-main { background-color: #000; padding: 20px; text-align: center; }
-        .banner-vermelho { background-color: #b91c1c; color: white; padding: 10px; text-align: center; font-weight: 900; text-transform: uppercase; }
+        #card-export { width: 450px; background: white; border: 2px solid #d4af37; }
     </style>
 </head>
-<body class="bg-slate-100 p-4 md:p-10 flex flex-col lg:flex-row gap-10 justify-center items-start">
+<body class="bg-slate-100 p-8 flex flex-col lg:flex-row justify-center items-start gap-10">
 
-    <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-md border-t-4 border-red-600">
-        <h2 class="text-2xl font-bold mb-6 text-slate-800">Configuração do Card</h2>
-        
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-bold text-slate-600 mb-1">Logo do Frigorífico:</label>
-                <input type="file" id="logoInput" accept="image/*" class="w-full text-sm border p-2 rounded" onchange="previewLogo(event)">
-            </div>
+    <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-md border-t-4 border-red-600">
+        <h2 class="text-xl font-bold mb-4 uppercase">Ajustar Mensagem</h2>
+        <textarea id="msgInput" rows="6" class="w-full border p-3 rounded text-sm mb-4" oninput="document.getElementById('preview-msg').innerText = this.value">
+Passando para comunicar horário de produção.
 
-            <div>
-                <label class="block text-sm font-bold text-slate-600 mb-1">Data da Produção:</label>
-                <input type="date" id="dataInput" class="w-full border p-2 rounded" oninput="atualizarPreview()">
-            </div>
-
-            <div>
-                <label class="block text-sm font-bold text-slate-600 mb-1">Texto de Rodapé:</label>
-                <textarea id="msgInput" rows="4" class="w-full border p-2 rounded text-sm" oninput="atualizarPreview()">
 Lembrando do café da manhã de cada setor: todos os setores tomam café na primeira paradinha.
 
 Havendo qualquer alteração comunicarei vocês.</textarea>
-            </div>
-
-            <button onclick="baixarCard()" class="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-lg font-black shadow-lg transition-all flex justify-center items-center gap-2">
-                <span>📥 BAIXAR PARA WHATSAPP</span>
-            </button>
-        </div>
+        
+        <button onclick="baixarCard()" class="w-full bg-black text-white py-4 rounded-lg font-black shadow-lg hover:bg-gray-800 transition">
+            📥 BAIXAR CARD (.JPG)
+        </button>
+        <p class="text-xs text-center text-gray-400 mt-4">Sua sessão expira em 5 min de inatividade.</p>
     </div>
 
-    <div id="card-export" class="shadow-2xl">
-        <div class="header-main">
-            <img id="logo-preview" src="" class="max-h-24 mx-auto mb-2 hidden">
-            <div id="placeholder-logo" class="h-16 flex items-center justify-center border-2 border-dashed border-gray-600 text-gray-500 text-xs uppercase">
-                Sua Logo Aparecerá Aqui
-            </div>
+    <div id="card-export">
+        <div class="bg-black p-6 text-center">
+            <img src="logo.png" class="h-32 mx-auto mb-2">
         </div>
-
-        <div class="banner-vermelho tracking-widest text-lg">
+        
+        <div class="bg-red-700 text-white py-2 text-center font-black uppercase tracking-widest italic">
             Comunicado de Produção
         </div>
 
         <div class="p-6">
-            <p id="preview-data" class="text-center font-bold text-slate-900 text-xl mb-6 border-b-2 border-gold pb-2 uppercase italic">
-                Selecione uma data
+            <p id="preview-data" class="text-center font-bold text-2xl text-slate-900 border-b-2 border-gold pb-2 mb-6 uppercase italic">
+                CARREGANDO DATA...
             </p>
 
-            <div id="setores-preview" class="grid grid-cols-1 gap-2 mb-6">
+            <div id="setores-lista" class="space-y-3 mb-6 text-lg">
                 </div>
 
-            <div class="bg-slate-50 p-4 border-l-4 border-gold rounded">
-                <p id="preview-msg" class="text-slate-700 text-sm leading-relaxed whitespace-pre-line">
+            <div class="bg-slate-50 p-4 border-l-4 border-gold">
+                <p id="preview-msg" class="text-slate-800 text-sm leading-relaxed whitespace-pre-line">
+                    Passando para comunicar horário de produção.
+
                     Lembrando do café da manhã de cada setor: todos os setores tomam café na primeira paradinha.
+                    
+                    Havendo qualquer alteração comunicarei vocês.
                 </p>
             </div>
         </div>
 
-        <div class="bg-black p-3 text-center">
-            <span class="text-gold font-bold text-[10px] tracking-[0.2em] uppercase">Excelência e Qualidade • 2026</span>
+        <div class="bg-black text-gold text-[10px] p-2 text-center font-bold tracking-[0.3em] uppercase">
+            Alimentando Gerações
         </div>
     </div>
 
     <script>
-        // Função para carregar os setores salvos no banco
-        async function carregarSetores() {
-            const res = await fetch('/api/setores');
-            const setores = await res.json();
-            const container = document.getElementById('setores-preview');
-            
-            container.innerHTML = setores.map(s => `
-                <div class="flex justify-between items-center bg-white border-b border-slate-100 py-1">
-                    <span class="font-bold text-slate-800 text-sm uppercase">${s.nome}</span>
-                    <span class="text-red-700 font-mono font-black text-base">${s.horario}</span>
+        async function carregarDados() {
+            // Busca Data
+            const resData = await fetch('/api/config/data');
+            const dataCfg = await resData.json();
+            if(dataCfg.valor) {
+                const d = new Date(dataCfg.valor + "T00:00:00");
+                document.getElementById('preview-data').innerText = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+            }
+
+            // Busca Setores
+            const resSet = await fetch('/api/setores');
+            const setores = await resSet.json();
+            document.getElementById('setores-lista').innerHTML = setores.map(s => `
+                <div class="flex justify-between border-b border-slate-100 pb-1 font-bold">
+                    <span class="uppercase text-slate-700">${s.nome}</span>
+                    <span class="text-red-700 font-mono">${s.horario}</span>
                 </div>
             `).join('');
         }
 
-        // Função para processar a logo
-        function previewLogo(event) {
-            const reader = new FileReader();
-            reader.onload = function() {
-                const output = document.getElementById('logo-preview');
-                const placeholder = document.getElementById('placeholder-logo');
-                output.src = reader.result;
-                output.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-            };
-            reader.readAsDataURL(event.target.files[0]);
-        }
-
-        // Atualiza os textos em tempo real
-        function atualizarPreview() {
-            const data = document.getElementById('dataInput').value;
-            const msg = document.getElementById('msgInput').value;
-            
-            if(data) {
-                const dateObj = new Date(data);
-                dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
-                const formatada = dateObj.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
-                document.getElementById('preview-data').innerText = formatada;
-            }
-            document.getElementById('preview-msg').innerText = msg;
-        }
-
-        // Gera a imagem final
         function baixarCard() {
-            const card = document.getElementById('card-export');
-            const btn = document.querySelector('button');
-            btn.innerText = "⏳ GERANDO...";
-
-            html2canvas(card, { 
-                scale: 3, // Alta qualidade
-                useCORS: true,
-                backgroundColor: "#ffffff"
-            }).then(canvas => {
+            html2canvas(document.getElementById('card-export'), { scale: 3 }).then(canvas => {
                 const link = document.createElement('a');
-                link.download = `COMUNICADO_${new Date().getTime()}.jpg`;
-                link.href = canvas.toDataURL('image/jpeg', 1.0);
+                link.download = `FRIGOBOM_PRODUCAO.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.9);
                 link.click();
-                btn.innerHTML = "<span>📥 BAIXAR PARA WHATSAPP</span>";
             });
         }
 
-        carregarSetores();
+        carregarDados();
+        // Inatividade
+        let timer = setTimeout(() => window.location.href = '/login.html', 300000);
+        document.onmousemove = () => { clearTimeout(timer); timer = setTimeout(() => window.location.href = '/login.html', 300000); };
     </script>
 </body>
 </html>

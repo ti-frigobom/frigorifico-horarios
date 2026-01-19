@@ -18,13 +18,16 @@ const Config = mongoose.model('Config', new mongoose.Schema({
     chave: String, valor: String
 }));
 
-// 3. MIDDLEWARES
-app.use(bodyParser.json());
+// 3. CONFIGURAÇÃO DE SESSÃO (5 MINUTOS)
 app.use(session({
-    secret: 'frigo-secret-2026',
+    secret: 'frigobom-2026-secure',
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: false,
+    cookie: { maxAge: 5 * 60 * 1000 } // 5 minutos
 }));
+
+app.use(bodyParser.json());
+app.use(express.static('public'));
 
 // 4. SEGURANÇA
 const LOGIN_USER = "admin";
@@ -32,7 +35,7 @@ const LOGIN_PASS = "Fr!go26";
 
 function proteger(req, res, next) {
     if (req.session.logado) next();
-    else res.status(401).json({ error: "Não autorizado" });
+    else res.status(401).json({ error: "Sessão expirada" });
 }
 
 // 5. ROTAS
@@ -54,7 +57,6 @@ app.get('/api/setores', async (req, res) => {
     res.json(lista);
 });
 
-// Salvar Tudo (Protegido)
 app.post('/api/atualizar-todos', proteger, async (req, res) => {
     const { setores, dataProducao } = req.body;
     try {
@@ -68,7 +70,8 @@ app.post('/api/atualizar-todos', proteger, async (req, res) => {
 });
 
 app.post('/api/setores', proteger, async (req, res) => {
-    const novo = new Setor({ idSetor: Date.now(), ordem: 99, nome: "Novo Setor", horario: "00:00 - 00:00" });
+    const ultimo = await Setor.findOne().sort({ ordem: -1 });
+    const novo = new Setor({ idSetor: Date.now(), ordem: ultimo ? ultimo.ordem + 1 : 1, nome: "Novo Setor", horario: "00:00 - 00:00" });
     await novo.save();
     res.json(novo);
 });
@@ -78,5 +81,4 @@ app.delete('/api/setores/:id', proteger, async (req, res) => {
     res.json({ success: true });
 });
 
-app.use(express.static('public'));
 app.listen(process.env.PORT || 3000);
