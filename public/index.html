@@ -3,36 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Horários Frigorífico</title>
+    <title>Painel Frigorífico</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0f172a; color: white; overflow-x: hidden; }
-        .setor-card { background: #1e293b; border-left: 8px solid #22c55e; }
-        .setor-nome { font-size: 1.5rem; font-weight: bold; }
-        .setor-hora { font-size: 2rem; color: #fbbf24; font-family: monospace; }
+        body { background-color: #020617; color: white; }
+        .card-normal { background: #1e293b; border-left: 10px solid #22c55e; }
+        .card-atencao { background: #451a03; border-left: 10px solid #f97316; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
     </style>
 </head>
 <body class="p-6">
-    <h1 class="text-4xl font-black text-center mb-8 uppercase tracking-widest text-slate-400">Escala de Trabalho - Setores</h1>
-    
-    <div id="grid-setores" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        </div>
+    <h1 class="text-4xl font-black text-center mb-8 uppercase text-slate-500">Horários de Turno</h1>
+    <div id="grid-setores" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
 
     <script>
+        function verificarAtenção(horarioString) {
+            try {
+                // Espera formato "HH:MM - HH:MM"
+                const partes = horarioString.split('-');
+                if(partes.length < 2) return false;
+
+                const horaFimStr = partes[1].trim(); // Pega "17:00"
+                const [horasFim, minutosFim] = horaFimStr.split(':').map(Number);
+
+                const agora = new Date();
+                const horaAtual = agora.getHours();
+                const minutosAtuais = agora.getMinutes();
+
+                // Converte tudo para minutos totais do dia para comparar
+                const totalMinutosFim = (horasFim * 60) + minutosFim;
+                const totalMinutosAgora = (horaAtual * 60) + minutosAtuais;
+
+                return totalMinutosAgora >= totalMinutosFim;
+            } catch (e) { return false; }
+        }
+
         async function carregarHorarios() {
             const res = await fetch('/api/setores');
             const setores = await res.json();
             const container = document.getElementById('grid-setores');
-            container.innerHTML = setores.map(s => `
-                <div class="setor-card p-4 rounded-lg shadow-xl flex flex-col justify-center items-center">
-                    <span class="text-slate-400 uppercase text-sm">${s.nome}</span>
-                    <span class="setor-hora">${s.horario}</span>
-                </div>
-            `).join('');
+            
+            container.innerHTML = setores.map(s => {
+                const atencao = verificarAtenção(s.horario);
+                const classeCard = atencao ? 'card-atencao' : 'card-normal';
+                
+                return `
+                    <div class="${classeCard} p-6 rounded-lg shadow-2xl flex flex-col items-center">
+                        <span class="text-slate-400 uppercase text-lg font-bold">${s.nome}</span>
+                        <span class="text-4xl font-mono mt-2 text-yellow-400">${s.horario}</span>
+                        ${atencao ? '<span class="text-orange-500 text-xs font-bold mt-2">TURNO ENCERRADO</span>' : ''}
+                    </div>
+                `;
+            }).join('');
         }
 
         carregarHorarios();
-        setInterval(carregarHorarios, 30000); // Atualiza a cada 30 segundos
+        setInterval(carregarHorarios, 30000); 
     </script>
 </body>
 </html>

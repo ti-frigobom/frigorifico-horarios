@@ -2,13 +2,14 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Admin - Gerenciar Horários</title>
+    <title>Admin - Gerenciar Setores</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-8">
-    <div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
-        <h1 class="text-2xl font-bold mb-6">Painel de Controle de Horários</h1>
-        <div id="lista-admin" class="space-y-4">
+<body class="bg-gray-100 p-4 md:p-8">
+    <div class="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+        <h1 class="text-3xl font-bold mb-8 text-gray-800 border-b pb-4">Gerenciar Setores e Horários</h1>
+        
+        <div class="grid grid-cols-1 gap-4" id="lista-admin">
             </div>
     </div>
 
@@ -17,25 +18,42 @@
             const res = await fetch('/api/setores');
             const setores = await res.json();
             const container = document.getElementById('lista-admin');
+            
             container.innerHTML = setores.map(s => `
-                <div class="flex items-center justify-between border-b pb-2">
-                    <span class="font-medium">${s.nome}</span>
-                    <div class="flex gap-2">
-                        <input type="text" id="input-${s.id}" value="${s.horario}" class="border p-1 rounded">
-                        <button onclick="salvar(${s.id})" class="bg-blue-600 text-white px-4 py-1 rounded">Salvar</button>
+                <div class="flex flex-col md:flex-row gap-4 items-center bg-gray-50 p-4 rounded border border-gray-200">
+                    <div class="flex-1 w-full">
+                        <label class="text-xs text-gray-500 uppercase font-bold">Nome do Setor</label>
+                        <input type="text" id="nome-${s.idSetor}" value="${s.nome}" 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
                     </div>
+                    <div class="flex-1 w-full">
+                        <label class="text-xs text-gray-500 uppercase font-bold">Horário (ex: 07:00 - 17:00)</label>
+                        <input type="text" id="hora-${s.idSetor}" value="${s.horario}" 
+                            class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+                    </div>
+                    <button onclick="salvar(${s.idSetor})" 
+                        class="w-full md:w-auto mt-4 md:mt-0 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold transition">
+                        GRAVAR
+                    </button>
                 </div>
             `).join('');
         }
 
         async function salvar(id) {
-            const horario = document.getElementById(`input-${id}`).value;
-            await fetch('/api/atualizar', {
+            const nome = document.getElementById(`nome-${id}`).value;
+            const horario = document.getElementById(`hora-${id}`).value;
+
+            const res = await fetch('/api/atualizar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, horario })
+                body: JSON.stringify({ id, nome, horario })
             });
-            alert('Horário atualizado!');
+
+            if (res.ok) {
+                alert(`Setor ${id} atualizado com sucesso!`);
+            } else {
+                alert('Erro ao salvar no banco de dados.');
+            }
         }
 
         carregarAdmin();

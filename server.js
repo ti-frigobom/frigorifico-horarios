@@ -37,16 +37,18 @@ async function inicializarBanco() {
 }
 inicializarBanco();
 
-// 4. Rotas da API
-app.get('/api/setores', async (req, res) => {
-    const setores = await Setor.find().sort({ idSetor: 1 });
-    res.json(setores);
-});
-
+// Rota atualizada para aceitar nome e horário
 app.post('/api/atualizar', async (req, res) => {
-    const { id, horario } = req.body;
-    await Setor.findOneAndUpdate({ idSetor: id }, { horario: horario });
-    res.json({ success: true });
+    const { id, nome, horario } = req.body;
+    try {
+        await Setor.findOneAndUpdate(
+            { idSetor: id }, 
+            { nome: nome, horario: horario }
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 const PORT = process.env.PORT || 3000;
