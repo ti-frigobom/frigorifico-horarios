@@ -9,7 +9,7 @@ app.use(express.static('public'));
 
 // 1. COLE AQUI SUA STRING DE CONEXÃO DO MONGODB ATLAS
 // Substitua <password> pela senha que você criou no Atlas
-const MONGO_URI = 'SUA_CONNECTION_STRING_AQUI';
+const MONGO_URI = 'mongodb+srv://ti-frigobom:<db_password>@horarios.epbewyg.mongodb.net/?appName=Horarios';
 
 mongoose.connect(MONGO_URI)
   .then(() => console.log('Conectado ao MongoDB Atlas'))
