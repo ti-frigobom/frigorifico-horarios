@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Acesso Restrito</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 h-screen flex items-center justify-center p-4">
+    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border-t-8 border-red-600">
+        <h1 class="text-2xl font-black text-center mb-6 uppercase tracking-tight">Acesso Gerencial</h1>
+        
+        <div class="space-y-4">
+            <input type="text" id="user" placeholder="Usuário" class="w-full border-2 p-3 rounded-lg outline-none focus:border-red-500">
+            <input type="password" id="pass" placeholder="Senha" class="w-full border-2 p-3 rounded-lg outline-none focus:border-red-500">
+            <button onclick="fazerLogin()" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition shadow-lg"> ENTRAR </button>
+            <p id="erro" class="text-red-500 text-sm text-center hidden pt-2">Usuário ou senha incorretos!</p>
+        </div>
+    </div>
+
+    <script>
+        async function fazerLogin() {
+            const usuario = document.getElementById('user').value;
+            const senha = document.getElementById('pass').value;
+            const erro = document.getElementById('erro');
+
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario, senha })
+            });
+
+            if (res.ok) {
+                window.location.href = '/admin.html';
+            } else {
+                erro.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

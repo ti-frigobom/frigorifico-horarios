@@ -1,11 +1,56 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const session = require('express-session'); // Nova dependência
 const path = require('path');
 
 const app = express();
+
+// CONFIGURAÇÃO DE SESSÃO
+app.use(session({
+    secret: 'chave-secreta-frigorifico', // Pode ser qualquer texto
+    resave: false,
+    saveUninitialized: true
+}));
+
 app.use(bodyParser.json());
+
+// CONFIGURAÇÃO DE LOGIN (USUÁRIO E SENHA)
+const LOGIN_USER = "admin";
+const LOGIN_PASS = "Fr!go26"; // <--- ALTERE SUA SENHA AQUI
+
+// Middleware de Proteção
+function proteger(req, res, next) {
+    if (req.session.logado) {
+        next();
+    } else {
+        res.redirect('/login.html');
+    }
+}
+
+// Rota de Login
+app.post('/api/login', (req, res) => {
+    const { usuario, senha } = req.body;
+    if (usuario === LOGIN_USER && senha === LOGIN_PASS) {
+        req.session.logado = true;
+        res.json({ success: true });
+    } else {
+        res.status(401).json({ success: false, message: "Acesso negado" });
+    }
+});
+
+// APLICAÇÃO DA PROTEÇÃO:
+// A página da TV (index.html) continua pública.
+// Protegemos o Admin, o Gerador e as APIs de escrita.
+app.use('/admin.html', proteger);
+app.use('/gerador.html', proteger);
+app.post('/api/atualizar-todos', proteger);
+app.post('/api/setores', proteger);
+app.delete('/api/setores/:id', proteger);
+
 app.use(express.static('public'));
+
+// ... (Restante do código de conexão MongoDB e rotas GET que já criamos)
 
 // 1. CONEXÃO COM O BANCO DE DADOS (MONGODB ATLAS)
 const MONGO_URI = 'mongodb+srv://ti-frigobom:e9SD&n5F*y9!@horarios.epbewyg.mongodb.net/?appName=Horarios'; // <--- COLOQUE SUA STRING AQUI
