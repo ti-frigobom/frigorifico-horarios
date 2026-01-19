@@ -2,152 +2,65 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Produção</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { 
-            background-color: #020617; 
-            color: white; 
-            height: 100vh; 
-            margin: 0; 
-            overflow: hidden; 
-            display: flex; 
-            flex-direction: column; 
-        }
-        
-        /* Card Normal: Verde (Em operação hoje) */
+        body { background: #020617; color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .card-normal { background: #1e293b; border-left: 15px solid #22c55e; }
-        
-        /* Card Atenção: Vermelho (Turno acabou ou data passada) */
         .card-atencao { background: #450a0a; border-left: 15px solid #ef4444; animation: pulse 2s infinite; }
-        
-        /* Card Futuro: Azul/Cinza (Programação para outro dia) */
-        .card-futuro { background: #0f172a; border-left: 15px solid #3b82f6; opacity: 0.9; }
-
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
-        
-        #grid-setores {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 20px; 
-            padding: 25px; 
-            flex-grow: 1; 
-            align-content: start;
-        }
+        .card-futuro { background: #0f172a; border-left: 15px solid #3b82f6; opacity: 0.8; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
     </style>
 </head>
 <body>
-
-    <header class="py-8 bg-slate-900 border-b border-slate-800 shadow-2xl">
-        <h1 id="titulo-principal" class="text-5xl md:text-6xl font-black text-center uppercase tracking-tighter">
-            HORÁRIOS DA PRODUÇÃO
-        </h1>
+    <header class="py-8 bg-slate-900 border-b border-slate-800 shadow-2xl text-center">
+        <h1 id="titulo" class="text-5xl font-black uppercase tracking-tighter">HORÁRIOS DA PRODUÇÃO</h1>
     </header>
 
-    <div id="grid-setores">
-        </div>
+    <div id="grid-setores" class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 flex-grow overflow-y-auto"></div>
 
-    <footer class="bg-slate-900 p-6 border-t border-slate-800 flex justify-center gap-12">
-        <div class="flex items-center gap-4">
-            <div class="w-8 h-8 bg-green-500 rounded shadow-lg"></div>
-            <span class="text-2xl font-black uppercase text-slate-300 italic">Em Operação</span>
-        </div>
-        <div class="flex items-center gap-4">
-            <div class="w-8 h-8 bg-blue-500 rounded shadow-lg"></div>
-            <span class="text-2xl font-black uppercase text-slate-300 italic">Programado</span>
-        </div>
-        <div class="flex items-center gap-4">
-            <div class="w-8 h-8 bg-red-500 rounded shadow-lg"></div>
-            <span class="text-2xl font-black uppercase text-slate-300 italic">Turno Encerrado</span>
-        </div>
+    <footer class="bg-slate-900 p-6 flex justify-center gap-10 border-t border-slate-800">
+        <div class="flex items-center gap-2"><div class="w-6 h-6 bg-green-500"></div><span class="font-bold uppercase italic text-slate-400">Em Operação</span></div>
+        <div class="flex items-center gap-2"><div class="w-6 h-6 bg-blue-500"></div><span class="font-bold uppercase italic text-slate-400">Programado</span></div>
+        <div class="flex items-center gap-2"><div class="w-6 h-6 bg-red-500"></div><span class="font-bold uppercase italic text-slate-400">Encerrado</span></div>
     </footer>
 
     <script>
-        let dataBancoStr = "";
+        async function atualizar() {
+            const resData = await fetch('/api/config/data');
+            const dataCfg = await resData.json();
+            const resSetores = await fetch('/api/setores');
+            const setores = await resSetores.json();
 
-        function verificarStatus(horarioString) {
-            const agora = new Date();
+            // Lógica de Data
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+            const dataBanc = dataCfg.valor ? new Date(dataCfg.valor + "T00:00:00") : hoje;
             
-            // 1. Criar objeto da data atual (hoje) sem horas para comparação
-            const hoje = new Date();
-            hoje.setHours(0, 0, 0, 0);
+            document.getElementById('titulo').innerText = `HORÁRIOS DA PRODUÇÃO - ${dataBanc.toLocaleDateString('pt-BR')}`;
 
-            // 2. Criar objeto da data do banco
-            const dataProducao = new Date(dataBancoStr);
-            dataProducao.setMinutes(dataProducao.getMinutes() + dataProducao.getTimezoneOffset());
-            dataProducao.setHours(0, 0, 0, 0);
-
-            // Comparação de Datas
-            if (dataProducao > hoje) return 'futuro'; // Data é amanhã ou depois
-            if (dataProducao < hoje) return 'atencao'; // Data já passou (ontem, etc)
-
-            // Se a data é HOJE, verifica o horário
-            try {
-                const horaFimStr = horarioString.split('-')[1].trim(); 
-                const [h, m] = horaFimStr.split(':').map(Number);
-                const totalMinutosFim = (h * 60) + m;
-                const totalMinutosAgora = (agora.getHours() * 60) + agora.getMinutes();
-
-                return totalMinutosAgora >= totalMinutosFim ? 'atencao' : 'normal';
-            } catch (e) { 
-                return 'normal'; 
-            }
-        }
-
-        async function carregarDados() {
-            try {
-                // 1. Buscar Data no Banco
-                const resData = await fetch('/api/config/data');
-                const dataJson = await resData.json();
-                dataBancoStr = dataJson.valor;
-
-                if (dataBancoStr) {
-                    const d = new Date(dataBancoStr);
-                    d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-                    const dataFmt = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                    document.getElementById('titulo-principal').innerText = `HORÁRIOS DA PRODUÇÃO - ${dataFmt}`;
+            document.getElementById('grid-setores').innerHTML = setores.map(s => {
+                let status = 'normal';
+                if (dataBanc > hoje) status = 'futuro';
+                else if (dataBanc < hoje) status = 'atencao';
+                else {
+                    const fim = s.horario.split('-')[1]?.trim();
+                    if(fim) {
+                        const [h, m] = fim.split(':').map(Number);
+                        if ((new Date().getHours()*60 + new Date().getMinutes()) >= (h*60 + m)) status = 'atencao';
+                    }
                 }
 
-                // 2. Buscar Setores
-                const resSetores = await fetch('/api/setores');
-                const setores = await resSetores.json();
-                const container = document.getElementById('grid-setores');
-                
-                container.innerHTML = setores.map(s => {
-                    const status = verificarStatus(s.horario);
-                    
-                    let classeCard = "card-normal";
-                    let etiqueta = "";
+                const cores = { normal: 'card-normal', atencao: 'card-atencao', futuro: 'card-futuro' };
+                const textos = { normal: '', atencao: 'ENCERRADO', futuro: 'AGENDADO' };
 
-                    if (status === 'atencao') {
-                        classeCard = "card-atencao";
-                        etiqueta = "ENCERRADO";
-                    } else if (status === 'futuro') {
-                        classeCard = "card-futuro";
-                        etiqueta = "AGENDADO";
-                    }
-
-                    return `
-                        <div class="${classeCard} p-8 rounded-2xl flex flex-col justify-center items-center">
-                            <span class="text-slate-400 uppercase text-3xl font-black mb-3 text-center">${s.nome}</span>
-                            <span class="text-6xl md:text-7xl font-mono font-black text-yellow-400 drop-shadow-2xl">${s.horario}</span>
-                            ${etiqueta ? `<span class="text-white text-lg font-black mt-4 tracking-widest">${etiqueta}</span>` : ''}
-                        </div>`;
-                }).join('');
-            } catch (err) { 
-                console.error("Erro na atualização:", err); 
-            }
+                return `<div class="${cores[status]} p-8 rounded-2xl flex flex-col items-center justify-center shadow-xl">
+                    <span class="text-slate-400 font-black text-2xl uppercase mb-2">${s.nome}</span>
+                    <span class="text-6xl font-mono font-black text-yellow-400">${s.horario}</span>
+                    <span class="mt-4 font-black text-red-400">${textos[status]}</span>
+                </div>`;
+            }).join('');
         }
-
-        // Executa ao carregar
-        carregarDados();
-
-        // 3. Atualizar a cada 15 minutos (900.000 ms)
-        setInterval(carregarDados, 900000); 
-
-        // Recarregar a página inteira a cada 12 horas para limpeza de memória da TV
-        setTimeout(() => window.location.reload(), 43200000);
+        atualizar(); setInterval(atualizar, 900000); // 15 min
     </script>
 </body>
 </html>
