@@ -9,7 +9,7 @@ app.use(express.static('public'));
 
 // 1. CONFIGURAÇÃO DO BANCO DE DATA (MONGODB ATLAS)
 // Substitua o link abaixo pelo que você copiou no painel do MongoDB Atlas
-const MONGO_URI = 'mongodb+srv://ti-frigobom:<db_password>@horarios.epbewyg.mongodb.net/?appName=Horarios';
+const MONGO_URI = 'mongodb+srv://ti-frigobom:e9SD&n5F*y9!@horarios.epbewyg.mongodb.net/?appName=Horarios';
 
 mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ Conectado ao MongoDB Atlas'))
