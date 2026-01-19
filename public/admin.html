@@ -2,57 +2,103 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Admin - Gerenciar Setores</title>
+    <title>Admin - Gestão e Ordenação</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .sticky-header { position: sticky; top: 0; z-index: 50; background: white; border-bottom: 2px solid #e2e8f0; }
+        .drag-item { transition: all 0.2s; }
+    </style>
 </head>
-<body class="bg-gray-100 p-4 md:p-8">
-    <div class="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow-lg">
-        <h1 class="text-3xl font-bold mb-8 text-gray-800 border-b pb-4">Gerenciar Setores e Horários</h1>
+<body class="bg-gray-100 pb-20">
+    <div class="max-w-5xl mx-auto bg-white shadow-xl min-h-screen">
         
-        <div class="grid grid-cols-1 gap-4" id="lista-admin">
+        <div class="sticky-header p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Painel de Controle</h1>
+                <p class="text-sm text-gray-500">Arraste usando as setas para ordenar e clique em Salvar.</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="adicionarSetor()" class="bg-blue-100 text-blue-700 px-4 py-2 rounded font-bold hover:bg-blue-200">+ Setor</button>
+                <button onclick="salvarTudo()" id="btnSalvar" class="bg-green-600 text-white px-6 py-2 rounded font-black shadow-lg hover:bg-green-700">SALVAR TUDO</button>
+            </div>
+        </div>
+        
+        <div class="p-6 space-y-2" id="lista-admin">
             </div>
     </div>
 
     <script>
+        let setoresLocais = [];
+
         async function carregarAdmin() {
             const res = await fetch('/api/setores');
-            const setores = await res.json();
+            setoresLocais = await res.json();
+            renderizarLista();
+        }
+
+        function renderizarLista() {
             const container = document.getElementById('lista-admin');
-            
-            container.innerHTML = setores.map(s => `
-                <div class="flex flex-col md:flex-row gap-4 items-center bg-gray-50 p-4 rounded border border-gray-200">
-                    <div class="flex-1 w-full">
-                        <label class="text-xs text-gray-500 uppercase font-bold">Nome do Setor</label>
-                        <input type="text" id="nome-${s.idSetor}" value="${s.nome}" 
-                            class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+            container.innerHTML = setoresLocais.map((s, index) => `
+                <div class="drag-item flex items-center gap-3 bg-gray-50 p-3 rounded border border-gray-200" data-id="${s.idSetor}">
+                    <div class="flex flex-col gap-1">
+                        <button onclick="mover(${index}, -1)" class="text-gray-400 hover:text-blue-600">▲</button>
+                        <button onclick="mover(${index}, 1)" class="text-gray-400 hover:text-blue-600">▼</button>
                     </div>
-                    <div class="flex-1 w-full">
-                        <label class="text-xs text-gray-500 uppercase font-bold">Horário (ex: 07:00 - 17:00)</label>
-                        <input type="text" id="hora-${s.idSetor}" value="${s.horario}" 
-                            class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
-                    </div>
-                    <button onclick="salvar(${s.idSetor})" 
-                        class="w-full md:w-auto mt-4 md:mt-0 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold transition">
-                        GRAVAR
-                    </button>
+                    
+                    <div class="flex-1"><input type="text" class="nome-in w-full border p-2 rounded" value="${s.nome}"></div>
+                    <div class="flex-1"><input type="text" class="hora-in w-full border p-2 rounded" value="${s.horario}"></div>
+                    
+                    <button onclick="excluir(${s.idSetor})" class="text-red-500 font-bold px-2 hover:bg-red-50 rounded">X</button>
                 </div>
             `).join('');
         }
 
-        async function salvar(id) {
-            const nome = document.getElementById(`nome-${id}`).value;
-            const horario = document.getElementById(`hora-${id}`).value;
+        function mover(index, direcao) {
+            const novaPos = index + direcao;
+            if (novaPos < 0 || novaPos >= setoresLocais.length) return;
+            
+            // Troca de posição no array local
+            const temp = setoresLocais[index];
+            setoresLocais[index] = setoresLocais[novaPos];
+            setoresLocais[novaPos] = temp;
+            
+            renderizarLista();
+        }
 
-            const res = await fetch('/api/atualizar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, nome, horario })
-            });
+        async function salvarTudo() {
+            const btn = document.getElementById('btnSalvar');
+            btn.innerText = "SALVANDO...";
+            
+            // Captura os valores atuais dos inputs antes de enviar
+            const cards = document.querySelectorAll('.drag-item');
+            const dadosSincronizados = Array.from(cards).map((card, index) => ({
+                idSetor: parseInt(card.getAttribute('data-id')),
+                nome: card.querySelector('.nome-in').value,
+                horario: card.querySelector('.hora-in').value
+            }));
 
-            if (res.ok) {
-                alert(`Setor ${id} atualizado com sucesso!`);
-            } else {
-                alert('Erro ao salvar no banco de dados.');
+            try {
+                await fetch('/api/atualizar-todos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ setores: dadosSincronizados })
+                });
+                alert('✅ Ordem e dados salvos com sucesso!');
+            } catch (e) { alert('Erro ao salvar'); }
+            
+            btn.innerText = "SALVAR TUDO";
+            carregarAdmin();
+        }
+
+        async function adicionarSetor() {
+            await fetch('/api/setores', { method: 'POST' });
+            carregarAdmin();
+        }
+
+        async function excluir(id) {
+            if(confirm("Excluir setor?")) {
+                await fetch(`/api/setores/${id}`, { method: 'DELETE' });
+                carregarAdmin();
             }
         }
 

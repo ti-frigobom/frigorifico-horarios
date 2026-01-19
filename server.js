@@ -7,62 +7,99 @@ const app = express();
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// 1. CONFIGURAÇÃO DO BANCO DE DATA (MONGODB ATLAS)
-// Substitua o link abaixo pelo que você copiou no painel do MongoDB Atlas
-const MONGO_URI = 'mongodb+srv://ti-frigobom:e9SD&n5F*y9!@horarios.epbewyg.mongodb.net/?appName=Horarios';
+// 1. CONEXÃO COM O BANCO DE DADOS (MONGODB ATLAS)
+const MONGO_URI = 'mongodb+srv://ti-frigobom:e9SD&n5F*y9!@horarios.epbewyg.mongodb.net/?appName=Horarios'; // <--- COLOQUE SUA STRING AQUI
 
 mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ Conectado ao MongoDB Atlas'))
   .catch(err => console.error('❌ Erro ao conectar:', err));
 
-// 2. DEFINIÇÃO DO MODELO (Estrutura dos dados)
+// 2. DEFINIÇÃO DO MODELO DE DADOS
 const SetorSchema = new mongoose.Schema({
-    idSetor: Number,
+    idSetor: Number, // Usado para identificação única
+    ordem: Number,   // Usado para definir a posição na tela
     nome: String,
     horario: String
 });
 const Setor = mongoose.model('Setor', SetorSchema);
 
-// 3. INICIALIZAÇÃO (Cria os 32 setores se o banco estiver vazio)
+// 3. INICIALIZAÇÃO DO BANCO (Cria dados iniciais se estiver vazio)
 async function inicializarBanco() {
     const count = await Setor.countDocuments();
     if (count === 0) {
         const setoresIniciais = [];
         for (let i = 1; i <= 32; i++) {
-            setoresIniciais.push({ idSetor: i, nome: `Setor ${i}`, horario: "07:00 - 17:00" });
+            setoresIniciais.push({ idSetor: i, ordem: i, nome: `Setor ${i}`, horario: "07:00 - 17:00" });
         }
         await Setor.insertMany(setoresIniciais);
-        console.log('📦 Banco inicializado com 32 setores.');
+        console.log('📦 Banco inicializado com sucesso.');
     }
 }
 inicializarBanco();
 
 // 4. ROTAS DA API
 
-// Rota para buscar todos os setores (usada pela TV e pelo Admin)
+// Buscar todos os setores ordenados pela posição definida pelo usuário
 app.get('/api/setores', async (req, res) => {
     try {
-        const setores = await Setor.find().sort({ idSetor: 1 });
+        const setores = await Setor.find().sort({ ordem: 1 });
         res.json(setores);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Rota para atualizar Nome e Horário (usada pelo botão SALVAR do Admin)
-app.post('/api/atualizar', async (req, res) => {
-    const { id, nome, horario } = req.body;
+// Criar um novo setor no final da lista
+app.post('/api/setores', async (req, res) => {
     try {
-        await Setor.findOneAndUpdate(
-            { idSetor: id }, 
-            { nome: nome, horario: horario }
-        );
+        const ultimo = await Setor.findOne().sort({ ordem: -1 });
+        const novaOrdem = ultimo ? ultimo.ordem + 1 : 1;
+        const novoId = ultimo ? ultimo.idSetor + 1 : Date.now(); // ID único simples
+
+        const novoSetor = new Setor({
+            idSetor: novoId,
+            ordem: novaOrdem,
+            nome: "Novo Setor",
+            horario: "00:00 - 00:00"
+        });
+        await novoSetor.save();
+        res.json(novoSetor);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Excluir um setor específico
+app.delete('/api/setores/:id', async (req, res) => {
+    try {
+        await Setor.findOneAndDelete({ idSetor: req.params.id });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// 5. INICIALIZAÇÃO DO SERVIDOR
+// SALVAR TUDO E ORDENAÇÃO (Rota Principal)
+app.post('/api/atualizar-todos', async (req, res) => {
+    const { setores } = req.body; 
+    try {
+        const operacoes = setores.map((s, index) => ({
+            updateOne: {
+                filter: { idSetor: s.idSetor },
+                update: { 
+                    nome: s.nome, 
+                    horario: s.horario,
+                    ordem: index // Salva a nova ordem baseada na posição do array enviado
+                }
+            }
+        }));
+        await Setor.bulkWrite(operacoes);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 5. LIGAR O SERVIDOR
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
