@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horários Frigorífico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; overflow-x: hidden; }
+        .setor-card { background: #1e293b; border-left: 8px solid #22c55e; }
+        .setor-nome { font-size: 1.5rem; font-weight: bold; }
+        .setor-hora { font-size: 2rem; color: #fbbf24; font-family: monospace; }
+    </style>
+</head>
+<body class="p-6">
+    <h1 class="text-4xl font-black text-center mb-8 uppercase tracking-widest text-slate-400">Escala de Trabalho - Setores</h1>
+    
+    <div id="grid-setores" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        </div>
+
+    <script>
+        async function carregarHorarios() {
+            const res = await fetch('/api/setores');
+            const setores = await res.json();
+            const container = document.getElementById('grid-setores');
+            container.innerHTML = setores.map(s => `
+                <div class="setor-card p-4 rounded-lg shadow-xl flex flex-col justify-center items-center">
+                    <span class="text-slate-400 uppercase text-sm">${s.nome}</span>
+                    <span class="setor-hora">${s.horario}</span>
+                </div>
+            `).join('');
+        }
+
+        carregarHorarios();
+        setInterval(carregarHorarios, 30000); // Atualiza a cada 30 segundos
+    </script>
+</body>
+</html>
