@@ -6,7 +6,7 @@ const path = require('path');
 
 const app = express();
 
-// 1. CONEXÃO MONGODB ATLAS
+// 1. CONEXÃO MONGODB
 const MONGO_URI = 'mongodb+srv://ti-frigobom:e9SD&n5F*y9!@horarios.epbewyg.mongodb.net/?appName=Horarios'; 
 mongoose.connect(MONGO_URI).then(() => console.log('✅ MongoDB Conectado'));
 
@@ -30,9 +30,6 @@ app.use(bodyParser.json());
 app.use(express.static('public'));
 
 // 4. SEGURANÇA
-const LOGIN_USER = "admin";
-const LOGIN_PASS = "Fr!go26";
-
 function proteger(req, res, next) {
     if (req.session.logado) next();
     else res.status(401).json({ error: "Sessão expirada" });
@@ -41,12 +38,13 @@ function proteger(req, res, next) {
 // 5. ROTAS DE AUTENTICAÇÃO
 app.post('/api/login', (req, res) => {
     const { usuario, senha } = req.body;
-    if (usuario === LOGIN_USER && senha === LOGIN_PASS) {
+    if (usuario === "admin" && senha === "Fr!go26") {
         req.session.logado = true;
         res.json({ success: true });
     } else res.status(401).json({ success: false });
 });
 
+// LOGOUT CORRIGIDO
 app.get('/api/logout', (req, res) => {
     req.session.destroy(() => {
         res.clearCookie('connect.sid');
@@ -65,14 +63,13 @@ app.get('/api/setores', async (req, res) => {
     res.json(lista);
 });
 
-// ADICIONAR NOVO SETOR (CORRIGIDO)
+// ADICIONAR NOVO SETOR CORRIGIDO
 app.post('/api/setores', proteger, async (req, res) => {
     try {
         const ultimo = await Setor.findOne().sort({ ordem: -1 });
-        const novaOrdem = ultimo ? ultimo.ordem + 1 : 1;
         const novo = new Setor({ 
             idSetor: Date.now(), 
-            ordem: novaOrdem, 
+            ordem: ultimo ? ultimo.ordem + 1 : 1, 
             nome: "Novo Setor", 
             horario: "00:00 - 00:00" 
         });
