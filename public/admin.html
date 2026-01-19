@@ -2,108 +2,107 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Admin - Gestão e Ordenação</title>
+    <title>Admin - Gestão Avançada</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .sticky-header { position: sticky; top: 0; z-index: 50; background: white; border-bottom: 2px solid #e2e8f0; }
-        .drag-item { transition: all 0.2s; }
+        .sticky-header { position: sticky; top: 0; z-index: 50; background: white; border-bottom: 3px solid #d4af37; }
+        input[type="time"] { border: 1px solid #ddd; padding: 5px; border-radius: 5px; font-family: monospace; font-weight: bold; }
     </style>
 </head>
 <body class="bg-gray-100 pb-20">
-    <div class="max-w-5xl mx-auto bg-white shadow-xl min-h-screen">
-        
-        <div class="sticky-header p-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">Painel de Controle</h1>
-                <p class="text-sm text-gray-500">Arraste usando as setas para ordenar e clique em Salvar.</p>
+    <div class="max-w-6xl mx-auto bg-white shadow-xl min-h-screen">
+        <div class="sticky-header p-6 flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-black text-gray-800 uppercase">Gestão de Produção</h1>
+                <button onclick="window.location.href='/gerador.html'" class="bg-[#d4af37] text-black hover:bg-[#b8962e] px-4 py-2 rounded-lg font-bold shadow transition flex items-center gap-2">
+                    📷 GERAR CARD WHATSAPP
+                </button>
             </div>
-            <div class="flex gap-2">
-		<button onclick="window.location.href='/gerador.html'" class="bg-black text-gold-500 border border-gold-500 px-4 py-2 rounded font-bold">Gerar Card WhatsApp</button>
-                <button onclick="adicionarSetor()" class="bg-blue-100 text-blue-700 px-4 py-2 rounded font-bold hover:bg-blue-200">+ Setor</button>
-                <button onclick="salvarTudo()" id="btnSalvar" class="bg-green-600 text-white px-6 py-2 rounded font-black shadow-lg hover:bg-green-700">SALVAR TUDO</button>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-lg border border-gray-200">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Data da Produção</label>
+                    <input type="date" id="dataProducaoGlobal" class="w-full border p-2 rounded-lg font-bold text-blue-700 outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="flex items-end gap-2">
+                    <button onclick="adicionarSetor()" class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold hover:bg-blue-200">+ NOVO SETOR</button>
+                    <button onclick="salvarTudo()" id="btnSalvar" class="bg-green-600 text-white flex-1 py-2 rounded-lg font-black shadow-lg hover:bg-green-700">SALVAR TUDO</button>
+                </div>
             </div>
         </div>
-        
-        <div class="p-6 space-y-2" id="lista-admin">
-            </div>
+
+        <div class="p-6 space-y-3" id="lista-admin"></div>
     </div>
 
     <script>
         let setoresLocais = [];
 
-        async function carregarAdmin() {
-            const res = await fetch('/api/setores');
-            setoresLocais = await res.json();
+        async function inicializar() {
+            const resData = await fetch('/api/config/data');
+            const dataConfig = await resData.json();
+            document.getElementById('dataProducaoGlobal').value = dataConfig.valor;
+
+            const resSetores = await fetch('/api/setores');
+            setoresLocais = await resSetores.json();
             renderizarLista();
         }
 
         function renderizarLista() {
             const container = document.getElementById('lista-admin');
-            container.innerHTML = setoresLocais.map((s, index) => `
-                <div class="drag-item flex items-center gap-3 bg-gray-50 p-3 rounded border border-gray-200" data-id="${s.idSetor}">
+            container.innerHTML = setoresLocais.map((s, index) => {
+                const [inicio, fim] = s.horario.includes(' - ') ? s.horario.split(' - ') : ["00:00", "00:00"];
+                return `
+                <div class="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 hover:shadow-md transition" data-id="${s.idSetor}">
                     <div class="flex flex-col gap-1">
-                        <button onclick="mover(${index}, -1)" class="text-gray-400 hover:text-blue-600">▲</button>
-                        <button onclick="mover(${index}, 1)" class="text-gray-400 hover:text-blue-600">▼</button>
+                        <button onclick="mover(${index}, -1)" class="text-gray-300 hover:text-blue-600">▲</button>
+                        <button onclick="mover(${index}, 1)" class="text-gray-300 hover:text-blue-600">▼</button>
                     </div>
-                    
-                    <div class="flex-1"><input type="text" class="nome-in w-full border p-2 rounded" value="${s.nome}"></div>
-                    <div class="flex-1"><input type="text" class="hora-in w-full border p-2 rounded" value="${s.horario}"></div>
-                    
-                    <button onclick="excluir(${s.idSetor})" class="text-red-500 font-bold px-2 hover:bg-red-50 rounded">X</button>
-                </div>
-            `).join('');
-        }
-
-        function mover(index, direcao) {
-            const novaPos = index + direcao;
-            if (novaPos < 0 || novaPos >= setoresLocais.length) return;
-            
-            // Troca de posição no array local
-            const temp = setoresLocais[index];
-            setoresLocais[index] = setoresLocais[novaPos];
-            setoresLocais[novaPos] = temp;
-            
-            renderizarLista();
+                    <div class="flex-1">
+                        <input type="text" class="nome-in w-full border-none p-2 font-bold text-gray-700" value="${s.nome}">
+                    </div>
+                    <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                        <input type="time" class="hora-inicio" value="${inicio}">
+                        <span class="text-gray-400 font-bold">ATÉ</span>
+                        <input type="time" class="hora-fim" value="${fim}">
+                    </div>
+                    <button onclick="excluir(${s.idSetor})" class="text-red-300 hover:text-red-600 px-2 font-bold">X</button>
+                </div>`;
+            }).join('');
         }
 
         async function salvarTudo() {
             const btn = document.getElementById('btnSalvar');
-            btn.innerText = "SALVANDO...";
+            btn.innerText = "⏳ PROCESSANDO...";
             
-            // Captura os valores atuais dos inputs antes de enviar
-            const cards = document.querySelectorAll('.drag-item');
-            const dadosSincronizados = Array.from(cards).map((card, index) => ({
+            const dataProducao = document.getElementById('dataProducaoGlobal').value;
+            const cards = document.querySelectorAll('[data-id]');
+            const setores = Array.from(cards).map(card => ({
                 idSetor: parseInt(card.getAttribute('data-id')),
                 nome: card.querySelector('.nome-in').value,
-                horario: card.querySelector('.hora-in').value
+                horario: `${card.querySelector('.hora-inicio').value} - ${card.querySelector('.hora-fim').value}`
             }));
 
-            try {
-                await fetch('/api/atualizar-todos', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ setores: dadosSincronizados })
-                });
-                alert('✅ Ordem e dados salvos com sucesso!');
-            } catch (e) { alert('Erro ao salvar'); }
+            await fetch('/api/atualizar-todos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ setores, dataProducao })
+            });
             
+            alert('✅ Dados e Data atualizados!');
             btn.innerText = "SALVAR TUDO";
-            carregarAdmin();
         }
 
-        async function adicionarSetor() {
-            await fetch('/api/setores', { method: 'POST' });
-            carregarAdmin();
+        function mover(index, d) {
+            const nova = index + d;
+            if (nova < 0 || nova >= setoresLocais.length) return;
+            [setoresLocais[index], setoresLocais[nova]] = [setoresLocais[nova], setoresLocais[index]];
+            renderizarLista();
         }
 
-        async function excluir(id) {
-            if(confirm("Excluir setor?")) {
-                await fetch(`/api/setores/${id}`, { method: 'DELETE' });
-                carregarAdmin();
-            }
-        }
+        async function adicionarSetor() { await fetch('/api/setores', { method: 'POST' }); inicializar(); }
+        async function excluir(id) { if(confirm("Excluir?")) { await fetch(`/api/setores/${id}`, { method: 'DELETE' }); inicializar(); } }
 
-        carregarAdmin();
+        inicializar();
     </script>
 </body>
 </html>
