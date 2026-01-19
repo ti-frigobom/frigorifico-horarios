@@ -1,41 +1,53 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const path = require('path');
 
 const app = express();
-const db = new sqlite3.Database('./horarios.db');
-
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// Criação da tabela de 32 setores na primeira execução
-db.serialize(() => {
-    db.run("CREATE TABLE IF NOT EXISTS setores (id INTEGER PRIMARY KEY, nome TEXT, horario TEXT)");
-    
-    db.get("SELECT count(*) as count FROM setores", (err, row) => {
-        if (row.count === 0) {
-            for (let i = 1; i <= 32; i++) {
-                db.run("INSERT INTO setores (nome, horario) VALUES (?, ?)", [`Setor ${i}`, "07:00 - 17:00"]);
-            }
+// 1. COLE AQUI SUA STRING DE CONEXÃO DO MONGODB ATLAS
+// Substitua <password> pela senha que você criou no Atlas
+const MONGO_URI = 'SUA_CONNECTION_STRING_AQUI';
+
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('Conectado ao MongoDB Atlas'))
+  .catch(err => console.error('Erro ao conectar:', err));
+
+// 2. Definindo o Modelo de Dados
+const SetorSchema = new mongoose.Schema({
+    idSetor: Number,
+    nome: String,
+    horario: String
+});
+const Setor = mongoose.model('Setor', SetorSchema);
+
+// 3. Inicializar 32 setores se o banco estiver vazio
+async function inicializarBanco() {
+    const count = await Setor.countDocuments();
+    if (count === 0) {
+        const setoresIniciais = [];
+        for (let i = 1; i <= 32; i++) {
+            setoresIniciais.push({ idSetor: i, nome: `Setor ${i}`, horario: "07:00 - 17:00" });
         }
-    });
+        await Setor.insertMany(setoresIniciais);
+        console.log('Banco inicializado com 32 setores.');
+    }
+}
+inicializarBanco();
+
+// 4. Rotas da API
+app.get('/api/setores', async (req, res) => {
+    const setores = await Setor.find().sort({ idSetor: 1 });
+    res.json(setores);
 });
 
-// Rota para buscar todos os setores
-app.get('/api/setores', (req, res) => {
-    db.all("SELECT * FROM setores", [], (err, rows) => {
-        res.json(rows);
-    });
-});
-
-// Rota para atualizar um horário
-app.post('/api/atualizar', (req, res) => {
+app.post('/api/atualizar', async (req, res) => {
     const { id, horario } = req.body;
-    db.run("UPDATE setores SET horario = ? WHERE id = ?", [horario, id], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
-    });
+    await Setor.findOneAndUpdate({ idSetor: id }, { horario: horario });
+    res.json({ success: true });
 });
 
-app.listen(3000, () => console.log('Servidor rodando em http://localhost:3000'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
